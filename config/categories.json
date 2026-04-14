@@ -1,0 +1,45 @@
+{
+  "categories": [
+    {
+      "name": "mistake",
+      "description": "Points out an error in the video",
+      "keywords": ["wrong", "incorrect", "error", "actually it's", "you said", "correction", "not true", "mistake"]
+    },
+    {
+      "name": "good_point",
+      "description": "Highlights something valuable in the video",
+      "keywords": ["great point", "well said", "exactly", "so true", "nailed it", "brilliant", "insightful"]
+    },
+    {
+      "name": "idea",
+      "description": "Suggests something new or a topic to cover",
+      "keywords": ["you should", "would be cool", "idea:", "suggestion", "how about", "could you cover", "please make a video"]
+    },
+    {
+      "name": "question",
+      "description": "Asks for clarification or help",
+      "keywords": ["how do", "what is", "can you explain", "where do", "why does", "is there"],
+      "patterns": ["\\?\\s*$"]
+    },
+    {
+      "name": "testimonial",
+      "description": "Shares a success story or praises the content",
+      "keywords": ["worked for me", "tried this", "thanks to you", "changed my", "helped me", "life changing", "game changer"]
+    },
+    {
+      "name": "complaint",
+      "description": "Negative feedback or frustration",
+      "keywords": ["didn't work", "waste of time", "disappointed", "misleading", "clickbait", "not helpful", "terrible"]
+    },
+    {
+      "name": "spam",
+      "description": "Irrelevant, promotional, or bot content",
+      "keywords": ["check out my", "subscribe to", "free money", "click here", "giveaway", "dm me", "whatsapp"],
+      "patterns": ["https?://(?!youtube\\.com|youtu\\.be)\\S+"]
+    },
+    {
+      "name": "other",
+      "description": "Does not fit any category above"
+    }
+  ]
+}
