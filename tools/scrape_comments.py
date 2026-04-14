@@ -1,106 +1,94 @@
 import json
 import os
-import sys
 from datetime import datetime, timedelta, timezone
 
+from apify_client import ApifyClient
 from dotenv import load_dotenv
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 
 from tools.db import get_connection, init_db, insert_channel, insert_video, insert_comment
 
 load_dotenv()
 
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+APIFY_API_TOKEN = os.getenv("APIFY_API_TOKEN")
+ACTOR_ID = "streamers/youtube-comments-scraper"
 
 
-def load_channels(config_path: str = "config/channels.json") -> list[dict]:
+def load_channels(config_path="config/channels.json"):
     with open(config_path, "r") as f:
         return json.load(f)
 
 
-def get_youtube_client(api_key: str | None = None):
-    key = api_key or YOUTUBE_API_KEY
-    if not key:
-        raise ValueError("YOUTUBE_API_KEY not set in .env")
-    return build("youtube", "v3", developerKey=key)
-
-
-def fetch_recent_videos(youtube, channel_id: str, days_back: int = 7) -> list[dict]:
-    since = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
+def get_video_urls_for_channel(channel_handle, days_back=7):
+    """Use Apify YouTube scraper to get recent video URLs for a channel."""
+    client = ApifyClient(APIFY_API_TOKEN)
+    run = client.actor("streamers/youtube-scraper").call(run_input={
+        "startUrls": [{"url": f"https://www.youtube.com/{channel_handle}/videos"}],
+        "maxResults": 50,
+        "maxResultsShorts": 0,
+    })
     videos = []
-    request = youtube.search().list(
-        part="id,snippet",
-        channelId=channel_id,
-        publishedAfter=since,
-        order="date",
-        type="video",
-        maxResults=50,
-    )
-    response = request.execute()
-    for item in response.get("items", []):
+    since = datetime.now(timezone.utc) - timedelta(days=days_back)
+    for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+        if item.get("date"):
+            try:
+                pub_date = datetime.fromisoformat(item["date"].replace("Z", "+00:00"))
+                if pub_date < since:
+                    continue
+            except (ValueError, TypeError):
+                pass
         videos.append({
-            "id": item["id"]["videoId"],
-            "title": item["snippet"]["title"],
-            "published_at": item["snippet"]["publishedAt"],
-            "url": f"https://www.youtube.com/watch?v={item['id']['videoId']}",
+            "id": item.get("id", ""),
+            "title": item.get("title", ""),
+            "published_at": item.get("date", ""),
+            "url": item.get("url", f"https://www.youtube.com/watch?v={item.get('id', '')}"),
         })
     return videos
 
 
-def fetch_comments_for_video(youtube, video_id: str) -> list[dict]:
+def fetch_comments_for_videos(video_urls, max_comments=500):
+    """Fetch comments for a list of video URLs using Apify."""
+    client = ApifyClient(APIFY_API_TOKEN)
+    start_urls = [{"url": url} for url in video_urls]
+    run = client.actor(ACTOR_ID).call(run_input={
+        "startUrls": start_urls,
+        "maxComments": max_comments,
+    })
     comments = []
-    try:
-        next_page_token = None
-        while True:
-            request = youtube.commentThreads().list(
-                part="snippet,replies",
-                videoId=video_id,
-                maxResults=100,
-                pageToken=next_page_token,
-            )
-            response = request.execute()
-            for item in response.get("items", []):
-                top = item["snippet"]["topLevelComment"]
-                comments.append({
-                    "id": top["id"],
-                    "author": top["snippet"]["authorDisplayName"],
-                    "text": top["snippet"]["textDisplay"],
-                    "likes": top["snippet"]["likeCount"],
-                    "published_at": top["snippet"]["publishedAt"],
-                    "is_reply": False,
-                    "parent_id": None,
-                })
-                for reply in item.get("replies", {}).get("comments", []):
-                    comments.append({
-                        "id": reply["id"],
-                        "author": reply["snippet"]["authorDisplayName"],
-                        "text": reply["snippet"]["textDisplay"],
-                        "likes": reply["snippet"]["likeCount"],
-                        "published_at": reply["snippet"]["publishedAt"],
-                        "is_reply": True,
-                        "parent_id": reply["snippet"]["parentId"],
-                    })
-            next_page_token = response.get("nextPageToken")
-            if not next_page_token:
-                break
-    except HttpError as e:
-        if "commentsDisabled" in e.content.decode("utf-8", errors="ignore"):
-            return []
-        raise
+    for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+        comments.append({
+            "id": item.get("cid", ""),
+            "video_id": item.get("videoId", ""),
+            "video_title": item.get("title", ""),
+            "video_url": item.get("pageUrl", ""),
+            "author": item.get("author", ""),
+            "text": item.get("comment", ""),
+            "likes": item.get("voteCount", 0),
+            "published_at": item.get("publishedAt", datetime.now(timezone.utc).isoformat()),
+            "is_reply": bool(item.get("replyToCid")),
+            "parent_id": item.get("replyToCid"),
+        })
     return comments
 
 
-def run(db_path: str | None = None, days_back: int = 7) -> None:
+def run(db_path=None, days_back=7):
+    if not APIFY_API_TOKEN:
+        raise ValueError("APIFY_API_TOKEN not set in .env")
+
     conn = get_connection(db_path)
     init_db(conn)
-    youtube = get_youtube_client()
     channels = load_channels()
     total_comments = 0
+
     for channel in channels:
         insert_channel(conn, id=channel["id"], name=channel["name"], handle=channel.get("handle", ""))
-        videos = fetch_recent_videos(youtube, channel_id=channel["id"], days_back=days_back)
-        print(f"Found {len(videos)} recent videos for {channel['name']}")
+
+        print(f"Fetching recent videos for {channel['name']}...")
+        videos = get_video_urls_for_channel(channel["handle"], days_back=days_back)
+        print(f"Found {len(videos)} recent videos")
+
+        if not videos:
+            continue
+
         for video in videos:
             insert_video(
                 conn,
@@ -110,21 +98,29 @@ def run(db_path: str | None = None, days_back: int = 7) -> None:
                 published_at=video["published_at"],
                 url=video["url"],
             )
-            comments = fetch_comments_for_video(youtube, video_id=video["id"])
-            for comment in comments:
-                insert_comment(
-                    conn,
-                    id=comment["id"],
-                    video_id=video["id"],
-                    author=comment["author"],
-                    text=comment["text"],
-                    likes=comment["likes"],
-                    published_at=comment["published_at"],
-                    is_reply=comment["is_reply"],
-                    parent_id=comment["parent_id"],
-                )
-            total_comments += len(comments)
-            print(f"  Scraped {len(comments)} comments from: {video['title']}")
+
+        video_urls = [v["url"] for v in videos]
+        print(f"Scraping comments from {len(video_urls)} videos...")
+        comments = fetch_comments_for_videos(video_urls)
+
+        for comment in comments:
+            vid_id = comment["video_id"]
+            if not vid_id:
+                continue
+            insert_comment(
+                conn,
+                id=comment["id"],
+                video_id=vid_id,
+                author=comment["author"],
+                text=comment["text"],
+                likes=comment["likes"],
+                published_at=comment["published_at"],
+                is_reply=comment["is_reply"],
+                parent_id=comment["parent_id"],
+            )
+        total_comments += len(comments)
+        print(f"Scraped {len(comments)} comments")
+
     conn.close()
     print(f"\nTotal comments scraped: {total_comments}")
 

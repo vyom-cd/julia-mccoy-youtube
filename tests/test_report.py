@@ -33,10 +33,12 @@ def test_build_report_data():
     data = build_report_data(conn)
     assert data["total_comments"] == 3
     assert data["video_count"] == 1
-    assert "mistake" in data["categories"]
-    assert "good_point" in data["categories"]
-    assert "spam" in data["categories"]
-    assert data["categories"]["mistake"]["count"] == 1
+    assert "mistake" in data["category_totals"]
+    assert "good_point" in data["category_totals"]
+    assert "spam" in data["category_totals"]
+    assert data["category_totals"]["mistake"]["count"] == 1
+    assert "vid1" in data["videos"]
+    assert "mistake" in data["videos"]["vid1"]["categories"]
     conn.close()
 
 

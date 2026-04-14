@@ -27,31 +27,52 @@ CATEGORY_ICONS = {
 
 def build_report_data(conn, since_date=None):
     comments = get_classified_comments_for_report(conn, since_date)
-    categories = OrderedDict()
-    video_ids = set()
+    videos = OrderedDict()
+    category_totals = OrderedDict()
+    for c in comments:
+        vid_key = c["video_id"]
+        if vid_key not in videos:
+            videos[vid_key] = {
+                "title": c["video_title"],
+                "url": c["video_url"],
+                "total_comments": 0,
+                "categories": OrderedDict(),
+            }
+        videos[vid_key]["total_comments"] += 1
+        cat = c["category"]
+        if cat not in videos[vid_key]["categories"]:
+            videos[vid_key]["categories"][cat] = {
+                "icon": CATEGORY_ICONS.get(cat, "📌"),
+                "comments": [],
+            }
+        videos[vid_key]["categories"][cat]["comments"].append(c)
+        category_totals[cat] = category_totals.get(cat, 0) + 1
+
+    for vid in videos.values():
+        sorted_cats = OrderedDict()
+        for cat_name in CATEGORY_ORDER:
+            if cat_name in vid["categories"]:
+                sorted_cats[cat_name] = vid["categories"][cat_name]
+        vid["categories"] = sorted_cats
+
+    sorted_totals = OrderedDict()
     for cat_name in CATEGORY_ORDER:
-        cat_comments = [c for c in comments if c["category"] == cat_name]
-        if not cat_comments:
-            continue
-        videos = OrderedDict()
-        for c in cat_comments:
-            video_ids.add(c["video_id"])
-            title = c["video_title"]
-            if title not in videos:
-                videos[title] = []
-            videos[title].append(c)
-        categories[cat_name] = {
-            "icon": CATEGORY_ICONS.get(cat_name, "📌"),
-            "count": len(cat_comments),
-            "videos": videos,
-        }
+        if cat_name in category_totals:
+            sorted_totals[cat_name] = {
+                "icon": CATEGORY_ICONS.get(cat_name, "📌"),
+                "count": category_totals[cat_name],
+            }
+
     return {
         "report_date": datetime.now(timezone.utc).strftime("%B %d, %Y"),
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "total_comments": len(comments),
-        "video_count": len(video_ids),
-        "category_count": len(categories),
-        "categories": categories,
+        "video_count": len(videos),
+        "category_count": len(sorted_totals),
+        "category_totals": sorted_totals,
+        "videos": videos,
+        "all_categories": CATEGORY_ORDER,
+        "category_icons": CATEGORY_ICONS,
     }
 
 

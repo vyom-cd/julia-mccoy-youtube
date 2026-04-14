@@ -1,8 +1,8 @@
 import os
 import pytest
-from unittest.mock import patch, MagicMock
 from tools.db import get_connection, init_db, insert_channel, insert_video, insert_comment, get_unclassified_comments
-from tools.classify_comments import load_categories, run as classify_run
+from tools.classify_comments import load_categories, classify_comment
+from tools.db import update_comment_category
 from tools.send_report import build_report_data, render_report
 
 TEST_DB = "data/test_comments.db"
@@ -29,7 +29,7 @@ def test_full_classify_and_report_flow():
         ("c1", "What tool do you use for this?", 2),
         ("c2", "You said the wrong date at 5:00", 0),
         ("c3", "Check out my channel http://spam.example.com", 0),
-        ("c4", "This helped me so much, tried it and got results!", 8),
+        ("c4", "This is a nice video", 8),
         ("c5", "You should make a video about SEO tools", 3),
     ]
     for cid, text, likes in test_comments:
@@ -42,15 +42,8 @@ def test_full_classify_and_report_flow():
     assert len(unclassified) == 5
 
     categories = load_categories("config/categories.json")
-    mock_client = MagicMock()
-    mock_client.messages.create.return_value = MagicMock(
-        content=[MagicMock(text="testimonial")]
-    )
-
-    from tools.classify_comments import classify_comment
-    from tools.db import update_comment_category
     for comment in unclassified:
-        category, method = classify_comment(comment["text"], categories, mock_client)
+        category, method = classify_comment(comment["text"], categories)
         update_comment_category(conn, comment["id"], category, method)
 
     unclassified_after = get_unclassified_comments(conn)

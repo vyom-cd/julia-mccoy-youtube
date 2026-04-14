@@ -3,7 +3,7 @@
     {
       "name": "mistake",
       "description": "Points out an error in the video",
-      "keywords": ["wrong", "incorrect", "error", "actually it's", "you said", "correction", "not true", "mistake"]
+      "keywords": ["incorrect", "actually it's", "correction", "not true", "that's wrong", "you're wrong", "you got wrong", "mistake in", "you made a mistake", "factually"]
     },
     {
       "name": "good_point",
