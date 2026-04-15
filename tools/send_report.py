@@ -73,6 +73,7 @@ def build_report_data(conn, since_date=None):
         "videos": videos,
         "all_categories": CATEGORY_ORDER,
         "category_icons": CATEGORY_ICONS,
+        "full_report_url": "https://vyom-cd.github.io/julia-mccoy-youtube/",
     }
 
 
@@ -83,24 +84,30 @@ def render_report(data, template_dir="templates"):
 
 
 def send_email(html_content, subject=None):
-    gmail_address = os.getenv("GMAIL_ADDRESS")
-    gmail_password = os.getenv("GMAIL_APP_PASSWORD")
-    recipients = os.getenv("REPORT_RECIPIENTS", "").split(",")
-    if not gmail_address or not gmail_password:
-        raise ValueError("GMAIL_ADDRESS and GMAIL_APP_PASSWORD must be set in .env")
-    if not recipients or recipients == [""]:
-        raise ValueError("REPORT_RECIPIENTS must be set in .env")
+    import json
+    import urllib.request
+    import base64
+
+    webhook_url = os.getenv("N8N_WEBHOOK_URL", "https://n8n.callreceptionist.com/webhook/youtube-report")
+    recipients = os.getenv("REPORT_RECIPIENTS", "vyomjain819@gmail.com").strip()
+
     if not subject:
-        subject = f"YouTube Comments Report — {datetime.now(timezone.utc).strftime('%b %d, %Y')}"
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = gmail_address
-    msg["To"] = ", ".join(recipients)
-    msg.attach(MIMEText(html_content, "html"))
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(gmail_address, gmail_password)
-        server.sendmail(gmail_address, recipients, msg.as_string())
-    print(f"Report sent to: {', '.join(recipients)}")
+        subject = f"YouTube Comments Report - {datetime.now(timezone.utc).strftime('%b %d, %Y')}"
+
+    payload = json.dumps({
+        "to": recipients,
+        "subject": subject,
+        "html": html_content,
+    }, ensure_ascii=False).encode("utf-8")
+
+    req = urllib.request.Request(
+        webhook_url,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    resp = urllib.request.urlopen(req)
+    print(f"Report sent to: {recipients}")
 
 
 def run(db_path=None):
