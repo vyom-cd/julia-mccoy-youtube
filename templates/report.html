@@ -7,7 +7,7 @@
 <body style="margin:0; padding:0; background-color:#000000; font-family:'Helvetica Neue',Arial,sans-serif; color:#f8fafc;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#000000; padding:24px 16px;">
 <tr><td align="center">
-<table width="720" cellpadding="0" cellspacing="0" style="max-width:720px; width:100%;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;">
 
 <!-- Header -->
 <tr><td style="text-align:center; padding:48px 32px 40px; background-color:#000000; border-bottom:1px solid rgba(60,212,157,0.2);">
@@ -35,103 +35,47 @@
   </table>
 </td></tr>
 
-<!-- Category Overview Pills -->
-<tr><td style="padding:20px 24px; background-color:#0a0a0a; border-bottom:1px solid #1a1a1a;">
+<!-- Category Breakdown -->
+<tr><td style="padding:24px; background-color:#0a0a0a; border-bottom:1px solid #1a1a1a;">
+  <table width="100%" cellpadding="0" cellspacing="0">
   {% for cat_name, cat_data in category_totals.items() %}
-  <span style="display:inline-block; background:#111; border:1px solid #222; border-radius:100px; padding:6px 16px; font-size:13px; color:#ccc; font-weight:500; margin:3px 2px;">{{ cat_data.icon }} {{ cat_name | replace('_', ' ') | title }} <strong style="color:#f8fafc;">{{ cat_data.count }}</strong></span>
-  {% endfor %}
-</td></tr>
-
-<!-- Videos -->
-{% for vid_id, video in videos.items() %}
-<tr><td style="padding-top:20px;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a; border:1px solid #1a1a1a; border-radius:16px; overflow:hidden;">
-
-  <!-- Video Header -->
-  <tr><td style="padding:22px 24px 14px;">
-    <table width="100%" cellpadding="0" cellspacing="0">
-    <tr>
-      <td style="font-size:18px; font-weight:700; color:#ffffff; line-height:1.4;">
-        <a href="{{ video.url }}" style="color:#ffffff; text-decoration:none;">{{ video.title }}</a>
-      </td>
-      <td width="120" style="text-align:right; vertical-align:top;">
-        <span style="font-size:12px; color:#666; background:#111; padding:5px 14px; border-radius:100px; border:1px solid #222; white-space:nowrap;">{{ video.total_comments }} comments</span>
-      </td>
-    </tr>
-    </table>
-  </td></tr>
-
-  <!-- Category Pills -->
-  <tr><td style="padding:0 24px 18px; border-bottom:1px solid #1a1a1a;">
-    {% for cat_name in all_categories %}
-    {% set cat_data = video.categories.get(cat_name) %}
-    {% set count = cat_data.comments | length if cat_data else 0 %}
-    {% if count > 0 %}
-    <span style="display:inline-block; background:#111; border:1px solid #222; border-radius:100px; padding:5px 14px; font-size:12px; font-weight:600; color:#ccc; margin:3px 2px;">
-      <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:{% if cat_name == 'mistake' %}#ef4444{% elif cat_name == 'complaint' %}#f97316{% elif cat_name == 'idea' %}#eab308{% elif cat_name == 'question' %}#3b82f6{% elif cat_name == 'testimonial' %}#3cd49d{% elif cat_name == 'good_point' %}#8b5cf6{% elif cat_name == 'spam' %}#333{% else %}#555{% endif %}; vertical-align:middle;"></span>
-      {{ cat_name | replace('_', ' ') | title }} {{ count }}
-    </span>
-    {% else %}
-    <span style="display:inline-block; background:#0a0a0a; border-radius:100px; padding:5px 14px; font-size:12px; font-weight:600; color:#333; margin:3px 2px;">
-      <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#222; vertical-align:middle;"></span>
-      {{ cat_name | replace('_', ' ') | title }}
-    </span>
-    {% endif %}
-    {% endfor %}
-  </td></tr>
-
-  <!-- Comments by Category (top 3 only for email) -->
-  {% for cat_name in all_categories %}
-  {% set cat_data = video.categories.get(cat_name) %}
-  {% if cat_data %}
-  <tr><td style="border-bottom:1px solid #111;">
-    <!-- Category Header -->
-    <table width="100%" cellpadding="0" cellspacing="0">
-    <tr>
-      <td style="padding:14px 24px 8px;">
-        <span style="display:inline-block; width:3px; height:16px; border-radius:2px; background:{% if cat_name == 'mistake' %}#ef4444{% elif cat_name == 'complaint' %}#f97316{% elif cat_name == 'idea' %}#eab308{% elif cat_name == 'question' %}#3b82f6{% elif cat_name == 'testimonial' %}#3cd49d{% elif cat_name == 'good_point' %}#8b5cf6{% elif cat_name == 'spam' %}#333{% else %}#555{% endif %}; vertical-align:middle; margin-right:8px;"></span>
-        <span style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#666;">{{ cat_name | replace('_', ' ') }} ({{ cat_data.comments | length }})</span>
-      </td>
-    </tr>
-    </table>
-    <!-- Comments (max 3) -->
-    <table width="100%" cellpadding="0" cellspacing="0" style="padding:4px 24px 20px;">
-    {% for comment in cat_data.comments[:3] %}
-    <tr><td style="padding-bottom:8px;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#111; border-radius:12px; border:1px solid #1a1a1a;">
-      <tr><td style="padding:14px 18px;">
-        <table width="100%" cellpadding="0" cellspacing="0">
-        <tr>
-          <td style="font-weight:600; font-size:13px; color:#3cd49d;">{{ comment.author }}</td>
-          <td style="text-align:right; font-size:11px; color:{% if comment.likes > 0 %}#3cd49d{% else %}#444{% endif %}; font-weight:{% if comment.likes > 0 %}600{% else %}500{% endif %};">{% if comment.likes > 0 %}{{ comment.likes }} likes{% endif %}</td>
-        </tr>
-        </table>
-        <div style="font-size:14px; color:#999; line-height:1.6; margin-top:6px;">{{ comment.text }}</div>
-      </td></tr>
+  <tr>
+    <td style="padding:8px 0; border-bottom:1px solid #111;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="font-size:14px; color:#ccc; font-weight:500;">{{ cat_data.icon }} {{ cat_name | replace('_', ' ') | title }}</td>
+        <td style="text-align:right; font-size:14px; color:#3cd49d; font-weight:700;">{{ cat_data.count }}</td>
+      </tr>
       </table>
-    </td></tr>
-    {% endfor %}
-    {% if cat_data.comments | length > 3 %}
-    <tr><td style="text-align:center; padding:4px 0 8px;">
-      <span style="font-size:12px; color:#666;">+{{ cat_data.comments | length - 3 }} more in full report</span>
-    </td></tr>
-    {% endif %}
-    </table>
-  </td></tr>
-  {% endif %}
+    </td>
+  </tr>
   {% endfor %}
-
   </table>
 </td></tr>
-{% endfor %}
+
+<!-- Top Videos Summary -->
+<tr><td style="padding:24px; background-color:#0a0a0a; border-bottom:1px solid #1a1a1a;">
+  <div style="font-size:12px; text-transform:uppercase; letter-spacing:1.5px; color:#666; font-weight:600; margin-bottom:16px;">Top Videos</div>
+  <table width="100%" cellpadding="0" cellspacing="0">
+  {% for vid_id, video in videos.items() %}
+  <tr>
+    <td style="padding:10px 0; border-bottom:1px solid #111;">
+      <a href="{{ video.url }}" style="font-size:14px; color:#ffffff; text-decoration:none; font-weight:600;">{{ video.title }}</a>
+      <div style="font-size:12px; color:#666; margin-top:4px;">{{ video.total_comments }} comments</div>
+    </td>
+  </tr>
+  {% endfor %}
+  </table>
+</td></tr>
 
 <!-- View Full Report Button -->
-<tr><td style="text-align:center; padding:32px 24px 16px;">
-  <a href="{{ full_report_url }}" style="display:inline-block; background:#3cd49d; color:#000; font-size:14px; font-weight:700; text-decoration:none; padding:14px 32px; border-radius:100px;">View Full Interactive Report</a>
+<tr><td style="text-align:center; padding:36px 24px; background-color:#0a0a0a;">
+  <a href="{{ full_report_url }}" style="display:inline-block; background:#3cd49d; color:#000; font-size:16px; font-weight:700; text-decoration:none; padding:16px 40px; border-radius:100px;">View Full Interactive Report</a>
+  <p style="margin:12px 0 0 0; font-size:12px; color:#555;">Click to see all comments with interactive filters</p>
 </td></tr>
 
 <!-- Footer -->
-<tr><td style="text-align:center; padding:16px 32px 32px; font-size:12px; color:#333; font-weight:500;">
+<tr><td style="text-align:center; padding:24px; font-size:12px; color:#333; font-weight:500;">
   Generated {{ generated_at }} &middot; Powered by <span style="color:#3cd49d;">First Movers</span>
 </td></tr>
 
