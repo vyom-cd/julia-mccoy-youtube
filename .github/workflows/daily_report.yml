@@ -8,6 +8,8 @@ on:
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repo
@@ -24,6 +26,14 @@ jobs:
       - name: Create data directory
         run: mkdir -p data
 
+      - name: Restore database cache
+        uses: actions/cache@v4
+        with:
+          path: data/comments.db
+          key: comments-db-${{ github.run_number }}
+          restore-keys: |
+            comments-db-
+
       - name: Scrape comments
         env:
           APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
@@ -32,8 +42,37 @@ jobs:
       - name: Classify comments
         run: python -c "from tools.classify_comments import run; run()"
 
-      - name: Send report
+      - name: Send email report
         env:
           N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
           REPORT_RECIPIENTS: ${{ secrets.REPORT_RECIPIENTS }}
         run: python -c "from tools.send_report import run; run()"
+
+      - name: Update GitHub Pages interactive report
+        run: |
+          python -c "
+          from tools.db import get_connection, init_db
+          from tools.send_report import build_report_data
+          from jinja2 import Environment, FileSystemLoader
+
+          conn = get_connection()
+          init_db(conn)
+          data = build_report_data(conn)
+          conn.close()
+
+          env = Environment(loader=FileSystemLoader('templates'))
+          template = env.get_template('report_web.html')
+          html = template.render(**data)
+
+          with open('docs/report/index.html', 'w', encoding='utf-8') as f:
+              f.write(html)
+          print(f'Updated GitHub Pages report: {data[\"total_comments\"]} comments, {data[\"video_count\"]} videos')
+          "
+
+      - name: Push updated report to GitHub Pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/report/index.html
+          git diff --cached --quiet || git commit -m "chore: update interactive report $(date -u +%Y-%m-%d)"
+          git push
