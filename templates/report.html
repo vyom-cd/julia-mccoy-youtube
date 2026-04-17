@@ -53,20 +53,69 @@
   </table>
 </td></tr>
 
-<!-- Top Videos Summary -->
-<tr><td style="padding:24px; background-color:#0a0a0a; border-bottom:1px solid #1a1a1a;">
-  <div style="font-size:12px; text-transform:uppercase; letter-spacing:1.5px; color:#666; font-weight:600; margin-bottom:16px;">Top Videos</div>
+<!-- Per-Video Breakdown -->
+{% for vid_id, video in videos.items() %}
+<tr><td style="padding:0; background-color:#0a0a0a; border-bottom:1px solid #1a1a1a;">
   <table width="100%" cellpadding="0" cellspacing="0">
-  {% for vid_id, video in videos.items() %}
+  <!-- Video title row -->
   <tr>
-    <td style="padding:10px 0; border-bottom:1px solid #111;">
-      <a href="{{ video.url }}" style="font-size:14px; color:#ffffff; text-decoration:none; font-weight:600;">{{ video.title }}</a>
-      <div style="font-size:12px; color:#666; margin-top:4px;">{{ video.total_comments }} comments</div>
+    <td style="padding:20px 24px 8px;">
+      <a href="{{ video.url }}" style="font-size:16px; color:#ffffff; text-decoration:none; font-weight:700; line-height:1.4;">{{ video.title }}</a>
+    </td>
+    <td style="padding:20px 24px 8px; text-align:right; white-space:nowrap; vertical-align:top;">
+      <span style="font-size:12px; color:#666; background:#111; padding:4px 12px; border-radius:100px; font-weight:600; border:1px solid #222;">{{ video.total_comments }} comments</span>
     </td>
   </tr>
+  <!-- Category pills row -->
+  <tr>
+    <td colspan="2" style="padding:8px 24px 20px;">
+      <table cellpadding="0" cellspacing="0">
+      <tr>
+        {% for cat_name in all_categories %}
+        {% set cat_data = video.categories.get(cat_name) %}
+        {% set count = cat_data.comments | length if cat_data else 0 %}
+        {% if count > 0 %}
+        <td style="padding:0 4px 4px 0;">
+          <span style="display:inline-block; font-size:11px; font-weight:600; padding:4px 10px; border-radius:100px; background:#111; color:#ccc; border:1px solid #222; white-space:nowrap;">{{ category_icons.get(cat_name, '') }} {{ cat_name | replace('_', ' ') | title }} {{ count }}</span>
+        </td>
+        {% endif %}
+        {% endfor %}
+      </tr>
+      </table>
+    </td>
+  </tr>
+  <!-- Top 3 comments for this video (highest liked, non-spam) -->
+  {% set ns = namespace(shown=0) %}
+  {% for cat_name in ['mistake', 'complaint', 'idea', 'question', 'good_point', 'testimonial'] %}
+  {% set cat_data = video.categories.get(cat_name) %}
+  {% if cat_data and ns.shown < 3 %}
+  {% for comment in cat_data.comments[:1] %}
+  {% if ns.shown < 3 %}
+  <tr>
+    <td colspan="2" style="padding:0 24px 12px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#111; border-radius:8px; border:1px solid #1a1a1a;">
+      <tr>
+        <td style="padding:12px 16px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="font-size:12px; color:#3cd49d; font-weight:600;">{{ comment.author }}</td>
+            <td style="text-align:right; font-size:11px; color:#444;">{{ category_icons.get(cat_name, '') }} {{ cat_name | replace('_', ' ') | title }}{% if comment.likes > 0 %} &middot; {{ comment.likes }} likes{% endif %}</td>
+          </tr>
+          </table>
+          <div style="font-size:13px; color:#999; line-height:1.5; margin-top:6px;">{{ comment.text[:200] }}{% if comment.text|length > 200 %}...{% endif %}</div>
+        </td>
+      </tr>
+      </table>
+    </td>
+  </tr>
+  {% set ns.shown = ns.shown + 1 %}
+  {% endif %}
+  {% endfor %}
+  {% endif %}
   {% endfor %}
   </table>
 </td></tr>
+{% endfor %}
 
 <!-- View Full Report Button -->
 <tr><td style="text-align:center; padding:36px 24px; background-color:#0a0a0a;">
