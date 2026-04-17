@@ -1,27 +1,53 @@
-# Daily YouTube Comment Report
+# Daily YouTube Comment Report — SOP
 
 ## Objective
-Scrape comments from Julia McCoy's recent YouTube videos, classify them by category, and email an HTML report.
+
+Scrape comments from Julia McCoy's YouTube channel daily, classify them into 8 categories, and email an HTML summary report.
 
 ## Pipeline Sequence
-1. Run `tools/scrape_comments.py` — fetches videos from last 7 days, scrapes all comments
-2. Run `tools/classify_comments.py` — classifies unclassified comments (keywords first, Claude AI second)
-3. Run `tools/send_report.py` — builds HTML report and emails it
 
-## Required Environment
-- `.env` must contain: YOUTUBE_API_KEY, ANTHROPIC_API_KEY, GMAIL_ADDRESS, GMAIL_APP_PASSWORD, REPORT_RECIPIENTS
-- Python dependencies installed from `requirements.txt`
+```
+1. Scrape → Apify API fetches comments from @JuliaMcCoy's recent videos (last 7 days)
+2. Classify → Pattern-based classifier assigns each comment a category
+3. Report → HTML email sent via N8N webhook + full interactive report on GitHub Pages
+```
 
-## Running Manually
+## How to Run
+
+### Automatic (daily)
+GitHub Actions runs at 9:00 AM IST (3:30 AM UTC) via `.github/workflows/daily_report.yml`.
+
+### Manual
 ```bash
 python tools/run_pipeline.py
 ```
 
-## Scheduled Execution
-Configured via Claude Code `/schedule` to run daily.
+### Individual steps
+```bash
+python -c "from tools.scrape_comments import run; run()"
+python -c "from tools.classify_comments import run; run()"
+python -c "from tools.send_report import run; run()"
+```
+
+### Re-classify everything
+```bash
+python tools/classify_comments.py --reset
+```
+
+## Required Environment Variables
+
+| Variable | Where | Purpose |
+|----------|-------|---------|
+| `APIFY_API_TOKEN` | `.env` + GitHub Secrets | Apify API for YouTube scraping |
+| `N8N_WEBHOOK_URL` | `.env` + GitHub Secrets | N8N webhook for email delivery |
+| `REPORT_RECIPIENTS` | `.env` + GitHub Secrets | Comma-separated email addresses |
 
 ## Troubleshooting
-- **YouTube API quota exceeded**: Free tier allows 10,000 units/day. Each search costs 100 units, each commentThreads.list costs 1 unit. Reduce `days_back` if hitting limits.
-- **Comments disabled on video**: Handled gracefully — returns empty list, logs a message.
-- **Gmail auth fails**: Ensure App Password is used (not regular password). Enable 2FA on the Gmail account first.
-- **Claude API error**: Check ANTHROPIC_API_KEY is valid. Haiku is used for cost efficiency.
+
+| Problem | Fix |
+|---------|-----|
+| Apify quota exceeded | Check usage at console.apify.com |
+| Comments not appearing | Video may have comments disabled |
+| Webhook fails | Check N8N workflow is active at n8n.callreceptionist.com |
+| Classification wrong | Edit patterns in `tools/classify_comments.py`, run with `--reset` |
+| Tests failing | `pytest tests/ -v` to see which test fails |

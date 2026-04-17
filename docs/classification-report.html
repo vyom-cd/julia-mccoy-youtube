@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classification Analysis — Julia McCoy YouTube</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;color:#e2e8f0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6;padding:40px 20px}
+.container{max-width:960px;margin:0 auto}
+.header{text-align:center;padding:48px 24px 40px;border-bottom:1px solid rgba(60,212,157,.15);margin-bottom:40px}
+.header h1{font-size:28px;font-weight:700;color:#fff;letter-spacing:-.5px;margin-bottom:6px}
+.header .sub{font-size:15px;color:#3cd49d;font-weight:500}
+.header .date{font-size:13px;color:#555;margin-top:6px}
+
+.stats{display:flex;gap:0;border:1px solid #1a1a1a;border-radius:12px;overflow:hidden;margin-bottom:40px}
+.stat{flex:1;text-align:center;padding:24px 12px;background:#111;border-right:1px solid #1a1a1a}
+.stat:last-child{border-right:none}
+.stat .n{font-size:32px;font-weight:800;line-height:1}
+.stat .n.green{color:#3cd49d}.stat .n.red{color:#ef4444}.stat .n.yellow{color:#fbbf24}.stat .n.blue{color:#60a5fa}
+.stat .l{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#666;margin-top:6px;font-weight:600}
+
+.section{margin-bottom:36px}
+.section-title{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:#666;font-weight:600;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #1a1a1a}
+
+.alert{padding:16px 20px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;margin-bottom:24px;font-size:14px;color:#fca5a5}
+.alert strong{color:#ef4444}
+.alert-warn{background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.2);color:#fde68a}
+.alert-warn strong{color:#fbbf24}
+
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 14px;background:#151515;color:#999;font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:600;border-bottom:1px solid #1a1a1a}
+td{padding:12px 14px;border-bottom:1px solid #111;font-size:13px;vertical-align:top}
+tr:hover{background:rgba(60,212,157,.03)}
+
+.cat-badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 10px;border-radius:100px;white-space:nowrap}
+.cat-mistake{background:rgba(239,68,68,.12);color:#ef4444}
+.cat-complaint{background:rgba(251,146,60,.12);color:#fb923c}
+.cat-idea{background:rgba(168,85,247,.12);color:#a855f7}
+.cat-question{background:rgba(96,165,250,.12);color:#60a5fa}
+.cat-testimonial{background:rgba(52,211,153,.12);color:#34d399}
+.cat-good_point{background:rgba(45,212,191,.12);color:#2dd4bf}
+.cat-other{background:rgba(148,163,184,.12);color:#94a3b8}
+.cat-spam{background:rgba(239,68,68,.08);color:#f87171}
+
+.bar-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.bar-label{width:100px;text-align:right;font-size:12px;color:#999;font-weight:500}
+.bar-track{flex:1;height:24px;background:#1a1a1a;border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:#000;min-width:28px}
+.bar-old{opacity:.35;position:absolute;top:0;left:0;height:100%}
+.bar-count{font-size:12px;color:#888;width:40px;text-align:right}
+
+.flow-item{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:#111;border-radius:8px;border:1px solid #1a1a1a;margin-bottom:8px}
+.flow-arrow{color:#555;font-size:14px;flex-shrink:0;padding-top:1px}
+.flow-count{font-size:20px;font-weight:800;color:#fbbf24;width:40px;text-align:center;flex-shrink:0}
+.flow-detail{flex:1}
+.flow-cats{font-size:13px;margin-bottom:6px}
+.flow-sample{font-size:12px;color:#666;line-height:1.5;font-style:italic;border-left:2px solid #222;padding-left:10px;margin-top:4px}
+
+.verdict{padding:20px;background:#111;border-radius:10px;border:1px solid #1a1a1a;margin-top:12px}
+.verdict h3{font-size:16px;font-weight:700;color:#fff;margin-bottom:10px}
+.verdict ul{list-style:none;padding:0}
+.verdict li{padding:6px 0;font-size:13px;color:#ccc;border-bottom:1px solid #111}
+.verdict li:last-child{border:none}
+.verdict li strong{color:#fbbf24}
+
+.footer{text-align:center;padding:32px;margin-top:40px;border-top:1px solid #1a1a1a;font-size:12px;color:#444}
+
+@media(max-width:640px){
+body{padding:20px 12px}
+.stats{flex-wrap:wrap}
+.stat{min-width:50%;border-bottom:1px solid #1a1a1a}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>Classification Analysis</h1>
+  <div class="sub">Julia McCoy YouTube Comment Monitor</div>
+  <div class="date">1,191 comments &middot; 14 videos &middot; April 17, 2026</div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="n blue">1,191</div><div class="l">Total Comments</div></div>
+  <div class="stat"><div class="n green">627</div><div class="l">Same Category</div></div>
+  <div class="stat"><div class="n yellow">564</div><div class="l">Changed</div></div>
+  <div class="stat"><div class="n red">52.6%</div><div class="l">Agreement</div></div>
+</div>
+
+<div class="alert">
+  <strong>Problem:</strong> The new classifier only agrees with the old one on 52.6% of comments. The main culprit is <strong>good_point</strong> — it balloons from 400 to 668 because any comment over 30 characters defaults to good_point. This catches complaints, ideas, mistakes, and spam that should stay in their categories.
+</div>
+
+<!-- Distribution comparison -->
+<div class="section">
+  <div class="section-title">Distribution: Old vs New</div>
+  <table>
+    <thead><tr><th>Category</th><th>Old Count</th><th>New Count</th><th>Change</th><th>Visual</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="cat-badge cat-good_point">good_point</span></td>
+        <td>400</td>
+        <td style="color:#fbbf24;font-weight:600">668</td>
+        <td style="color:#ef4444">+268 (+67%)</td>
+        <td><div style="display:flex;gap:4px;align-items:center"><div style="width:134px;height:10px;background:#2dd4bf;border-radius:3px;opacity:.3"></div><div style="width:224px;height:10px;background:#2dd4bf;border-radius:3px"></div></div></td>
+      </tr>
+      <tr>
+        <td><span class="cat-badge cat-question">question</span></td>
+        <td>71</td>
+        <td style="color:#fbbf24;font-weight:600">209</td>
+        <td style="color:#ef4444">+138 (+194%)</td>
+        <td><div style="display:flex;gap:4px;align-items:center"><div style="width:24px;height:10px;background:#60a5fa;border-radius:3px;opacity:.3"></div><div style="width:70px;height:10px;background:#60a5fa;border-radius:3px"></div></div></td>
+      </tr>
+      <tr>
+        <td><span class="cat-badge cat-other">other</span></td>
+        <td>321</td>
+        <td>143</td>
+        <td style="color:#3cd49d">-178 (-55%)</td>
+        <td><div style="display:flex;gap:4px;align-items:center"><div style="width:107px;height:10px;background:#94a3b8;border-radius:3px;opacity:.3"></div><div style="width:48px;height:10px;background:#94a3b8;border-radius:3px"></div></div></td>
+      </tr>
+      <tr>
+        <td><span class="cat-badge cat-complaint">complaint</span></td>
+        <td>149</td>
+        <td>40</td>
+        <td style="color:#3cd49d">-109 (-73%)</td>
+        <td><div style="display:flex;gap:4px;align-items:center"><div style="width:50px;height:10px;background:#fb923c;border-radius:3px;opacity:.3"></div><div style="width:14px;height:10px;background:#fb923c;border-radius:3px"></div></div></td>
+      </tr>
+      <tr>
+        <td><span class="cat-badge cat-spam">spam</span></td>
+        <td>136</td>
+        <td>65</td>
+        <td style="color:#3cd49d">-71 (-52%)</td>
+        <td><div style="display:flex;gap:4px;align-items:center"><div style="width:46px;height:10px;background:#f87171;border-radius:3px;opacity:.3"></div><div style="width:22px;height:10px;background:#f87171;border-radius:3px"></div></div></td>
+      </tr>
+      <tr>
+        <td><span class="cat-badge cat-testimonial">testimonial</span></td>
+        <td>88</td>
+        <td>48</td>
+        <td style="color:#3cd49d">-40 (-45%)</td>
+        <td><div style="display:flex;gap:4px;align-items:center"><div style="width:30px;height:10px;background:#34d399;border-radius:3px;opacity:.3"></div><div style="width:16px;height:10px;background:#34d399;border-radius:3px"></div></div></td>
+      </tr>
+      <tr>
+        <td><span class="cat-badge cat-mistake">mistake</span></td>
+        <td>15</td><td>11</td>
+        <td style="color:#94a3b8">-4</td>
+        <td><div style="display:flex;gap:4px;align-items:center"><div style="width:5px;height:10px;background:#ef4444;border-radius:3px;opacity:.3"></div><div style="width:4px;height:10px;background:#ef4444;border-radius:3px"></div></div></td>
+      </tr>
+      <tr>
+        <td><span class="cat-badge cat-idea">idea</span></td>
+        <td>11</td><td>7</td>
+        <td style="color:#94a3b8">-4</td>
+        <td><div style="display:flex;gap:4px;align-items:center"><div style="width:4px;height:10px;background:#a855f7;border-radius:3px;opacity:.3"></div><div style="width:3px;height:10px;background:#a855f7;border-radius:3px"></div></div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Top change flows -->
+<div class="section">
+  <div class="section-title">Biggest Change Flows (where comments moved)</div>
+
+  <div class="flow-item">
+    <div class="flow-count">141</div>
+    <div class="flow-detail">
+      <div class="flow-cats"><span class="cat-badge cat-other">other</span> <span class="flow-arrow">&rarr;</span> <span class="cat-badge cat-good_point">good_point</span></div>
+      <div class="flow-sample">"In case you didn't know, Julia is the daughter of Dr. Leonard McCoy"</div>
+      <div class="flow-sample">"I'm working on a paper right now. Protons work with a large numbers of dimensions..."</div>
+    </div>
+  </div>
+
+  <div class="flow-item">
+    <div class="flow-count">75</div>
+    <div class="flow-detail">
+      <div class="flow-cats"><span class="cat-badge cat-complaint">complaint</span> <span class="flow-arrow">&rarr;</span> <span class="cat-badge cat-good_point">good_point</span></div>
+      <div class="flow-sample">"Please just focus on the content and skip the crap.... it makes you sound funny.."</div>
+      <div class="flow-sample">"F Sam Altman from orbit. 40% of global Dram in one mans hand..."</div>
+    </div>
+  </div>
+
+  <div class="flow-item">
+    <div class="flow-count">57</div>
+    <div class="flow-detail">
+      <div class="flow-cats"><span class="cat-badge cat-other">other</span> <span class="flow-arrow">&rarr;</span> <span class="cat-badge cat-question">question</span></div>
+      <div class="flow-sample">"The image shows that the 'Something went wrong' error has returned..."</div>
+    </div>
+  </div>
+
+  <div class="flow-item">
+    <div class="flow-count">52</div>
+    <div class="flow-detail">
+      <div class="flow-cats"><span class="cat-badge cat-spam">spam</span> <span class="flow-arrow">&rarr;</span> <span class="cat-badge cat-good_point">good_point</span></div>
+      <div class="flow-sample">"own:655. 16:16. one:six. from:27 BE:7 ginning:46..."</div>
+      <div class="flow-sample">"Spot on, Julia. We are moving from 'chatbots' to 'autonomous agents'..."</div>
+    </div>
+  </div>
+
+  <div class="flow-item">
+    <div class="flow-count">50</div>
+    <div class="flow-detail">
+      <div class="flow-cats"><span class="cat-badge cat-good_point">good_point</span> <span class="flow-arrow">&rarr;</span> <span class="cat-badge cat-question">question</span></div>
+      <div class="flow-sample">"Ofc he is going public...its the only way out and, Anthropic is joining in for the same reason..."</div>
+    </div>
+  </div>
+
+  <div class="flow-item">
+    <div class="flow-count">47</div>
+    <div class="flow-detail">
+      <div class="flow-cats"><span class="cat-badge cat-testimonial">testimonial</span> <span class="flow-arrow">&rarr;</span> <span class="cat-badge cat-good_point">good_point</span></div>
+      <div class="flow-sample">"Thank you for the Biblical references, very appropriate."</div>
+      <div class="flow-sample">"Very interesting."</div>
+    </div>
+  </div>
+
+  <div class="flow-item">
+    <div class="flow-count">25</div>
+    <div class="flow-detail">
+      <div class="flow-cats"><span class="cat-badge cat-complaint">complaint</span> <span class="flow-arrow">&rarr;</span> <span class="cat-badge cat-question">question</span></div>
+      <div class="flow-sample">"You said it broke the 15 second limit but I watched the whole video and you never even said how long..."</div>
+    </div>
+  </div>
+</div>
+
+<!-- Root causes -->
+<div class="section">
+  <div class="section-title">Root Causes</div>
+  <div class="verdict">
+    <h3>Why 564 comments changed classification</h3>
+    <ul>
+      <li><strong>good_point is a black hole</strong> — any comment &gt;30 chars that doesn't match another pattern falls into good_point. The old classifier (classify_all.py) had the same threshold at 30 chars but had more aggressive pattern matching for complaints, spam, and testimonials that caught comments before they fell through.</li>
+      <li><strong>question is too aggressive</strong> — any comment containing "?" with &gt;15 chars becomes a question. Many rhetorical questions in complaints and opinions get reclassified. Old classifier had no secondary "?" catch.</li>
+      <li><strong>Complaint patterns too narrow</strong> — the old classify_all.py had 20+ complaint terms that weren't merged (e.g., "this is crap", "sound funny", "ain't it", "slop", "delusion"). Some were merged but several edge cases are missing.</li>
+      <li><strong>Spam regex misses</strong> — the numerology spam pattern <code>own:\d+.*one:\d+.*from:\d+</code> required 3 parts in the old classifier but only 2 in the new one. Some numerology spam still falls through to good_point because the patterns aren't specific enough.</li>
+      <li><strong>Testimonial length threshold changed</strong> — old: 150 chars. New: 150 chars for praise, but 50 chars for thanks. "Very interesting." (17 chars, no praise keyword match) falls to good_point instead of testimonial.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- What to fix -->
+<div class="section">
+  <div class="section-title">Recommended Fixes</div>
+  <div class="verdict">
+    <h3>3 changes to get agreement above 85%</h3>
+    <ul>
+      <li><strong>1. Raise the good_point floor to 80+ chars</strong> — comments under 80 chars that don't match any pattern should be "other", not "good_point". This alone fixes ~200 misclassifications.</li>
+      <li><strong>2. Add missing complaint patterns</strong> — merge the remaining terms from classify_all.py that were dropped: "sound funny", "is crap", "slop", "ai clone", "nonsense", "bs", "ai script", explicit profanity patterns.</li>
+      <li><strong>3. Widen testimonial catch</strong> — "Very interesting" and similar short positive reactions (under 30 chars) should be testimonial. Add "interesting", "nice", "cool" as short-form testimonial triggers.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="footer">
+  Classification analysis &middot; April 17, 2026 &middot; 1,191 comments across 14 videos
+</div>
+
+</div>
+</body>
+</html>

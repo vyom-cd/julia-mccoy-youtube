@@ -1,9 +1,11 @@
+import json
+import logging
 import os
-import smtplib
+import urllib.request
+import urllib.error
 from collections import OrderedDict
 from datetime import datetime, timezone
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+from html import escape
 
 from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader
@@ -11,6 +13,8 @@ from jinja2 import Environment, FileSystemLoader
 from tools.db import get_connection, init_db, get_classified_comments_for_report
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 CATEGORY_ORDER = ["mistake", "complaint", "idea", "question", "testimonial", "good_point", "other", "spam"]
 CATEGORY_ICONS = {
@@ -27,13 +31,19 @@ CATEGORY_ICONS = {
 
 def build_report_data(conn, since_date=None):
     comments = get_classified_comments_for_report(conn, since_date)
+
+    # Escape HTML in comment text to prevent XSS
+    for c in comments:
+        c["text"] = escape(c["text"])
+        c["author"] = escape(c["author"])
+
     videos = OrderedDict()
     category_totals = OrderedDict()
     for c in comments:
         vid_key = c["video_id"]
         if vid_key not in videos:
             videos[vid_key] = {
-                "title": c["video_title"],
+                "title": escape(c["video_title"]),
                 "url": c["video_url"],
                 "total_comments": 0,
                 "categories": OrderedDict(),
@@ -78,24 +88,25 @@ def build_report_data(conn, since_date=None):
 
 
 def render_report(data, template_dir="templates"):
-    env = Environment(loader=FileSystemLoader(template_dir))
+    env = Environment(loader=FileSystemLoader(template_dir), autoescape=True)
     template = env.get_template("report.html")
     return template.render(**data)
 
 
 def send_email(html_content, subject=None):
-    import json
-    import urllib.request
-    import base64
+    webhook_url = os.getenv("N8N_WEBHOOK_URL")
+    recipients = os.getenv("REPORT_RECIPIENTS")
 
-    webhook_url = os.getenv("N8N_WEBHOOK_URL", "https://n8n.callreceptionist.com/webhook/youtube-report")
-    recipients = os.getenv("REPORT_RECIPIENTS", "vyomjain819@gmail.com").strip()
+    if not webhook_url:
+        raise ValueError("N8N_WEBHOOK_URL not set in .env")
+    if not recipients:
+        raise ValueError("REPORT_RECIPIENTS not set in .env")
 
     if not subject:
         subject = f"YouTube Comments Report - {datetime.now(timezone.utc).strftime('%b %d, %Y')}"
 
     payload = json.dumps({
-        "to": recipients,
+        "to": recipients.strip(),
         "subject": subject,
         "html": html_content,
     }, ensure_ascii=False).encode("utf-8")
@@ -106,8 +117,19 @@ def send_email(html_content, subject=None):
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    resp = urllib.request.urlopen(req)
-    print(f"Report sent to: {recipients}")
+
+    try:
+        resp = urllib.request.urlopen(req, timeout=30)
+        logger.info("Report sent to: %s (status %s)", recipients, resp.status)
+        print(f"Report sent to: {recipients}")
+    except urllib.error.URLError as e:
+        logger.error("Failed to send report via webhook: %s", e)
+        print(f"ERROR: Failed to send report: {e}")
+        raise
+    except urllib.error.HTTPError as e:
+        logger.error("Webhook returned HTTP %s: %s", e.code, e.reason)
+        print(f"ERROR: Webhook returned {e.code}: {e.reason}")
+        raise
 
 
 def run(db_path=None):

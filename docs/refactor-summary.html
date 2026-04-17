@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Comment Monitor — Refactor Summary</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0a;
+    color: #e2e8f0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.6;
+    padding: 40px 20px;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 48px 24px 40px;
+    border-bottom: 1px solid rgba(60,212,157,0.15);
+    margin-bottom: 40px;
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .header .subtitle {
+    font-size: 15px;
+    color: #3cd49d;
+    font-weight: 500;
+  }
+  .header .date {
+    font-size: 13px;
+    color: #555;
+    margin-top: 6px;
+  }
+
+  /* Stats row */
+  .stats {
+    display: flex;
+    gap: 0;
+    border: 1px solid #1a1a1a;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 40px;
+  }
+  .stat {
+    flex: 1;
+    text-align: center;
+    padding: 24px 16px;
+    background: #111;
+    border-right: 1px solid #1a1a1a;
+  }
+  .stat:last-child { border-right: none; }
+  .stat .num {
+    font-size: 36px;
+    font-weight: 800;
+    color: #3cd49d;
+    line-height: 1;
+  }
+  .stat .num.red { color: #ef4444; }
+  .stat .num.blue { color: #60a5fa; }
+  .stat .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #666;
+    margin-top: 6px;
+    font-weight: 600;
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 36px;
+  }
+  .section-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #666;
+    font-weight: 600;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #1a1a1a;
+  }
+
+  /* Comparison table */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .compare-table th {
+    text-align: left;
+    padding: 12px 16px;
+    background: #151515;
+    color: #999;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .compare-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #111;
+    font-size: 14px;
+    vertical-align: top;
+  }
+  .compare-table tr:hover { background: rgba(60,212,157,0.03); }
+  .compare-table .area {
+    color: #fff;
+    font-weight: 600;
+    white-space: nowrap;
+    min-width: 160px;
+  }
+  .compare-table .before {
+    color: #ef4444;
+    opacity: 0.85;
+  }
+  .compare-table .after {
+    color: #3cd49d;
+  }
+
+  /* File changes */
+  .file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #111;
+    border-radius: 8px;
+    border: 1px solid #1a1a1a;
+    font-size: 14px;
+  }
+  .file-item .badge {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+  .badge-rewrite { background: rgba(96,165,250,0.15); color: #60a5fa; }
+  .badge-deleted { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .badge-fixed { background: rgba(60,212,157,0.15); color: #3cd49d; }
+  .badge-new { background: rgba(168,85,247,0.15); color: #a855f7; }
+  .file-item .path {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: #ccc;
+    font-size: 13px;
+  }
+  .file-item .desc {
+    color: #666;
+    font-size: 12px;
+    margin-left: auto;
+  }
+
+  /* Issues grid */
+  .issues {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .issue {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px;
+    background: #111;
+    border-radius: 10px;
+    border: 1px solid #1a1a1a;
+  }
+  .issue .icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    width: 28px;
+    text-align: center;
+  }
+  .issue .content { flex: 1; }
+  .issue .title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .issue .detail {
+    font-size: 13px;
+    color: #888;
+    line-height: 1.5;
+  }
+  .issue .tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 100px;
+    margin-left: auto;
+    align-self: center;
+    white-space: nowrap;
+  }
+  .tag-critical { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .tag-high { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .tag-fixed { background: rgba(60,212,157,0.15); color: #3cd49d; }
+
+  /* Test results */
+  .test-bar {
+    display: flex;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 12px 0;
+  }
+  .test-bar .pass { background: #3cd49d; }
+  .test-bar .fail { background: #ef4444; }
+  .test-detail {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #888;
+  }
+  .test-detail .pass-text { color: #3cd49d; font-weight: 600; }
+  .test-detail .fail-text { color: #ef4444; font-weight: 600; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 32px 24px;
+    margin-top: 40px;
+    border-top: 1px solid #1a1a1a;
+    font-size: 12px;
+    color: #444;
+  }
+  .footer a { color: #3cd49d; text-decoration: none; }
+
+  @media (max-width: 640px) {
+    body { padding: 20px 12px; }
+    .stats { flex-direction: column; }
+    .stat { border-right: none; border-bottom: 1px solid #1a1a1a; }
+    .stat:last-child { border-bottom: none; }
+    .compare-table { font-size: 13px; }
+    .compare-table td, .compare-table th { padding: 10px 8px; }
+    .file-item { flex-wrap: wrap; }
+    .file-item .desc { margin-left: 0; margin-top: 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>Refactor Summary</h1>
+    <div class="subtitle">Julia McCoy YouTube Comment Monitor</div>
+    <div class="date">April 17, 2026</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="num red">3</div>
+      <div class="label">Files Deleted</div>
+    </div>
+    <div class="stat">
+      <div class="num blue">10</div>
+      <div class="label">Files Modified</div>
+    </div>
+    <div class="stat">
+      <div class="num">25</div>
+      <div class="label">Tests Passing</div>
+    </div>
+    <div class="stat">
+      <div class="num">~400</div>
+      <div class="label">Lines Removed</div>
+    </div>
+  </div>
+
+  <!-- Before / After -->
+  <div class="section">
+    <div class="section-title">Before vs After</div>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Area</th>
+          <th>Before</th>
+          <th>After</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="area">Classifier files</td>
+          <td class="before">4 files with conflicting logic</td>
+          <td class="after">1 file, single source of truth</td>
+        </tr>
+        <tr>
+          <td class="area">Tests</td>
+          <td class="before">Imported non-existent functions, always failed</td>
+          <td class="after">25/25 passing in 0.6s</td>
+        </tr>
+        <tr>
+          <td class="area">DB journal mode</td>
+          <td class="before">MEMORY (data loss on crash)</td>
+          <td class="after">WAL (crash-safe)</td>
+        </tr>
+        <tr>
+          <td class="area">DB commits</td>
+          <td class="before">1 commit per row (500 writes for 500 comments)</td>
+          <td class="after">1 commit per batch</td>
+        </tr>
+        <tr>
+          <td class="area">Webhook errors</td>
+          <td class="before">No handling &mdash; pipeline crashes silently</td>
+          <td class="after">try/except with error messages + logging</td>
+        </tr>
+        <tr>
+          <td class="area">Hardcoded secrets</td>
+          <td class="before">Webhook URL + email in source code</td>
+          <td class="after">Moved to .env only</td>
+        </tr>
+        <tr>
+          <td class="area">HTML escaping</td>
+          <td class="before">None (XSS risk in email)</td>
+          <td class="after">escape() on text + autoescape=True</td>
+        </tr>
+        <tr>
+          <td class="area">CI classifier</td>
+          <td class="before">Keyword-only fallback (~80% unclassified)</td>
+          <td class="after">Full pattern classifier</td>
+        </tr>
+        <tr>
+          <td class="area">Docs</td>
+          <td class="before">Referenced YouTube API v3</td>
+          <td class="after">Matches Apify implementation</td>
+        </tr>
+        <tr>
+          <td class="area">classify_all.py</td>
+          <td class="before">Wiped all 1,191 classifications on every run</td>
+          <td class="after">Deleted. Reset requires explicit --reset flag</td>
+        </tr>
+        <tr>
+          <td class="area">requirements.txt</td>
+          <td class="before">Missing pytest</td>
+          <td class="after">Added pytest==8.3.4</td>
+        </tr>
+        <tr>
+          <td class="area">Logging</td>
+          <td class="before">Print statements only</td>
+          <td class="after">Structured logging in pipeline + report</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Test Results -->
+  <div class="section">
+    <div class="section-title">Test Results</div>
+    <div style="padding: 20px; background: #111; border-radius: 10px; border: 1px solid #1a1a1a;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span style="font-size: 14px; font-weight: 600; color: #fff;">pytest tests/ -v</span>
+        <span style="font-size: 14px; font-weight: 600; color: #3cd49d;">25/25 passed</span>
+      </div>
+      <div class="test-bar">
+        <div class="pass" style="width: 100%;"></div>
+      </div>
+      <div class="test-detail">
+        <span>test_classify (13) &middot; test_db (7) &middot; test_pipeline (1) &middot; test_report (3) &middot; test_scrape (1)</span>
+        <span class="pass-text">0.60s</span>
+      </div>
+    </div>
+
+    <div style="padding: 20px; background: #111; border-radius: 10px; border: 1px solid #1a1a1a; margin-top: 10px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span style="font-size: 14px; font-weight: 600; color: #fff;">Before refactor</span>
+        <span style="font-size: 14px; font-weight: 600; color: #ef4444;">0/25 passed</span>
+      </div>
+      <div class="test-bar">
+        <div class="fail" style="width: 100%;"></div>
+      </div>
+      <div class="test-detail">
+        <span>ImportError: cannot import 'load_categories' from 'tools.classify_comments'</span>
+        <span class="fail-text">FAILED</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Issues Found & Fixed -->
+  <div class="section">
+    <div class="section-title">Issues Found &amp; Fixed</div>
+    <div class="issues">
+      <div class="issue">
+        <div class="icon">1</div>
+        <div class="content">
+          <div class="title">4 duplicate classifiers with conflicting logic</div>
+          <div class="detail">classify_comments.py, ai_classify.py, classify_all.py, apply_remaining.py all classified differently. Merged best patterns into one.</div>
+        </div>
+        <div class="tag tag-fixed">Fixed</div>
+      </div>
+      <div class="issue">
+        <div class="icon">2</div>
+        <div class="content">
+          <div class="title">Tests imported non-existent functions</div>
+          <div class="detail">test_classify.py called load_categories(), classify_by_keywords(), classify_comment() &mdash; none existed. Rewrote all tests.</div>
+        </div>
+        <div class="tag tag-fixed">Fixed</div>
+      </div>
+      <div class="issue">
+        <div class="icon">3</div>
+        <div class="content">
+          <div class="title">classify_all.py destroyed all data on every run</div>
+          <div class="detail">UPDATE comments SET category = NULL with no backup, no flag, no confirmation. 1,191 classifications at risk. Deleted file, added --reset flag.</div>
+        </div>
+        <div class="tag tag-fixed">Fixed</div>
+      </div>
+      <div class="issue">
+        <div class="icon">4</div>
+        <div class="content">
+          <div class="title">Webhook call had zero error handling</div>
+          <div class="detail">urllib.request.urlopen() with no try/catch. Pipeline crashes silently if N8N is down. Added proper error handling + logging.</div>
+        </div>
+        <div class="tag tag-fixed">Fixed</div>
+      </div>
+      <div class="issue">
+        <div class="icon">5</div>
+        <div class="content">
+          <div class="title">Hardcoded secrets in source code</div>
+          <div class="detail">N8N webhook URL and email address hardcoded in send_report.py. Moved to .env variables only.</div>
+        </div>
+        <div class="tag tag-fixed">Fixed</div>
+      </div>
+      <div class="issue">
+        <div class="icon">6</div>
+        <div class="content">
+          <div class="title">Database journal mode MEMORY (unsafe)</div>
+          <div class="detail">PRAGMA journal_mode = MEMORY loses data on process crash. Changed to WAL (Write-Ahead Logging).</div>
+        </div>
+        <div class="tag tag-fixed">Fixed</div>
+      </div>
+      <div class="issue">
+        <div class="icon">7</div>
+        <div class="content">
+          <div class="title">500 disk writes for 500 comments</div>
+          <div class="detail">Every insert_comment() called conn.commit(). Now batched &mdash; one commit per channel instead of per row.</div>
+        </div>
+        <div class="tag tag-fixed">Fixed</div>
+      </div>
+      <div class="issue">
+        <div class="icon">8</div>
+        <div class="content">
+          <div class="title">No HTML escaping in email reports (XSS risk)</div>
+          <div class="detail">Comment text injected directly into HTML template. Added html.escape() on all user content + Jinja2 autoescape.</div>
+        </div>
+        <div class="tag tag-fixed">Fixed</div>
+      </div>
+      <div class="issue">
+        <div class="icon">9</div>
+        <div class="content">
+          <div class="title">config/categories.json never used</div>
+          <div class="detail">Category keywords defined in JSON but all classifiers had hardcoded patterns. Classifier now loads and uses the config.</div>
+        </div>
+        <div class="tag tag-fixed">Fixed</div>
+      </div>
+      <div class="issue">
+        <div class="icon">10</div>
+        <div class="content">
+          <div class="title">CI workflow ran broken fallback classifier</div>
+          <div class="detail">GitHub Actions used keyword-only classifier that only caught spam + questions (~80% unclassified). Now runs the full pattern classifier.</div>
+        </div>
+        <div class="tag tag-fixed">Fixed</div>
+      </div>
+      <div class="issue">
+        <div class="icon">11</div>
+        <div class="content">
+          <div class="title">Docs referenced YouTube API v3 instead of Apify</div>
+          <div class="detail">Workflow SOP still described YouTube Data API v3, Gmail SMTP, and Claude AI. Updated to match actual Apify + N8N webhook implementation.</div>
+        </div>
+        <div class="tag tag-fixed">Fixed</div>
+      </div>
+      <div class="issue">
+        <div class="icon">12</div>
+        <div class="content">
+          <div class="title">Missing pytest in requirements.txt</div>
+          <div class="detail">Tests couldn't run in CI without pytest installed. Added pytest==8.3.4.</div>
+        </div>
+        <div class="tag tag-fixed">Fixed</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Files Changed -->
+  <div class="section">
+    <div class="section-title">Files Changed</div>
+    <div class="file-list">
+      <div class="file-item">
+        <span class="badge badge-rewrite">Rewrite</span>
+        <span class="path">tools/classify_comments.py</span>
+        <span class="desc">Consolidated 4 classifiers into 1</span>
+      </div>
+      <div class="file-item">
+        <span class="badge badge-deleted">Deleted</span>
+        <span class="path">tools/ai_classify.py</span>
+        <span class="desc">Patterns merged into classify_comments.py</span>
+      </div>
+      <div class="file-item">
+        <span class="badge badge-deleted">Deleted</span>
+        <span class="path">tools/classify_all.py</span>
+        <span class="desc">Dangerous reset behavior removed</span>
+      </div>
+      <div class="file-item">
+        <span class="badge badge-deleted">Deleted</span>
+        <span class="path">tools/apply_remaining.py</span>
+        <span class="desc">Duplicate logic removed</span>
+      </div>
+      <div class="file-item">
+        <span class="badge badge-fixed">Fixed</span>
+        <span class="path">tools/db.py</span>
+        <span class="desc">WAL mode + batch commits</span>
+      </div>
+      <div class="file-item">
+        <span class="badge badge-fixed">Fixed</span>
+        <span class="path">tools/send_report.py</span>
+        <span class="desc">Error handling + no hardcoded secrets + XSS fix</span>
+      </div>
+      <div class="file-item">
+        <span class="badge badge-fixed">Fixed</span>
+        <span class="path">tools/scrape_comments.py</span>
+        <span class="desc">Batch commits</span>
+      </div>
+      <div class="file-item">
+        <span class="badge badge-fixed">Fixed</span>
+        <span class="path">tools/run_pipeline.py</span>
+        <span class="desc">Structured logging</span>
+      </div>
+      <div class="file-item">
+        <span class="badge badge-rewrite">Rewrite</span>
+        <span class="path">tests/test_classify.py</span>
+        <span class="desc">13 tests matching real function signatures</span>
+      </div>
+      <div class="file-item">
+        <span class="badge badge-rewrite">Rewrite</span>
+        <span class="path">tests/test_pipeline.py</span>
+        <span class="desc">Integration test with correct imports</span>
+      </div>
+      <div class="file-item">
+        <span class="badge badge-fixed">Fixed</span>
+        <span class="path">tests/test_report.py</span>
+        <span class="desc">Correct assertions + WAL cleanup</span>
+      </div>
+      <div class="file-item">
+        <span class="badge badge-fixed">Fixed</span>
+        <span class="path">.github/workflows/daily_report.yml</span>
+        <span class="desc">Full classifier + correct env vars</span>
+      </div>
+      <div class="file-item">
+        <span class="badge badge-fixed">Fixed</span>
+        <span class="path">requirements.txt</span>
+        <span class="desc">Added pytest</span>
+      </div>
+      <div class="file-item">
+        <span class="badge badge-rewrite">Rewrite</span>
+        <span class="path">workflows/daily_youtube_report.md</span>
+        <span class="desc">Matches Apify implementation</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Architecture -->
+  <div class="section">
+    <div class="section-title">Architecture (After)</div>
+    <div style="padding: 24px; background: #111; border-radius: 10px; border: 1px solid #1a1a1a; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 13px; line-height: 1.8; color: #999;">
+      <span style="color:#3cd49d;">Daily 9 AM IST</span> (GitHub Actions)<br>
+      &nbsp;&nbsp;&#9492;&#9472; <span style="color:#60a5fa;">scrape_comments.py</span> &rarr; Apify API &rarr; SQLite<br>
+      &nbsp;&nbsp;&#9492;&#9472; <span style="color:#60a5fa;">classify_comments.py</span> &rarr; patterns + config/categories.json<br>
+      &nbsp;&nbsp;&#9492;&#9472; <span style="color:#60a5fa;">send_report.py</span> &rarr; N8N webhook &rarr; email<br>
+      <br>
+      <span style="color:#666;">Config:</span> config/channels.json &middot; config/categories.json<br>
+      <span style="color:#666;">Data:</span>&nbsp;&nbsp; data/comments.db (SQLite, WAL mode)<br>
+      <span style="color:#666;">Tests:</span>&nbsp; 25 tests across 5 files (0.6s)
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    Refactor by Claude Code &middot; April 17, 2026 &middot; <a href="https://github.com/vyom-cd/julia-mccoy-youtube">github.com/vyom-cd/julia-mccoy-youtube</a>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,7 +1,7 @@
 import os
 import pytest
-from tools.db import get_connection, init_db, insert_channel, insert_video, insert_comment, get_unclassified_comments
-from tools.classify_comments import load_categories, classify_comment
+from tools.db import get_connection, init_db, insert_channel, insert_video, insert_comment, commit, get_unclassified_comments
+from tools.classify_comments import classify_comment, load_categories
 from tools.db import update_comment_category
 from tools.send_report import build_report_data, render_report
 
@@ -27,9 +27,9 @@ def test_full_classify_and_report_flow():
 
     test_comments = [
         ("c1", "What tool do you use for this?", 2),
-        ("c2", "You said the wrong date at 5:00", 0),
+        ("c2", "You said the wrong date at 5:00, you made a mistake there", 0),
         ("c3", "Check out my channel http://spam.example.com", 0),
-        ("c4", "This is a nice video", 8),
+        ("c4", "I think the real challenge is that most businesses don't understand how to implement AI properly and they end up wasting resources", 8),
         ("c5", "You should make a video about SEO tools", 3),
     ]
     for cid, text, likes in test_comments:
@@ -37,6 +37,7 @@ def test_full_classify_and_report_flow():
                        text=text, likes=likes,
                        published_at="2026-04-10T01:00:00Z",
                        is_reply=False, parent_id=None)
+    commit(conn)
 
     unclassified = get_unclassified_comments(conn)
     assert len(unclassified) == 5

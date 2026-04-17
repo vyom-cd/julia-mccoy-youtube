@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from apify_client import ApifyClient
 from dotenv import load_dotenv
 
-from tools.db import get_connection, init_db, insert_channel, insert_video, insert_comment
+from tools.db import get_connection, init_db, insert_channel, insert_video, insert_comment, commit
 
 load_dotenv()
 
@@ -81,6 +81,7 @@ def run(db_path=None, days_back=7):
 
     for channel in channels:
         insert_channel(conn, id=channel["id"], name=channel["name"], handle=channel.get("handle", ""))
+        commit(conn)
 
         print(f"Fetching recent videos for {channel['name']}...")
         videos = get_video_urls_for_channel(channel["handle"], days_back=days_back)
@@ -98,6 +99,7 @@ def run(db_path=None, days_back=7):
                 published_at=video["published_at"],
                 url=video["url"],
             )
+        commit(conn)  # Batch commit all videos at once
 
         video_urls = [v["url"] for v in videos]
         print(f"Scraping comments from {len(video_urls)} videos...")
@@ -118,6 +120,7 @@ def run(db_path=None, days_back=7):
                 is_reply=comment["is_reply"],
                 parent_id=comment["parent_id"],
             )
+        commit(conn)  # Batch commit all comments at once
         total_comments += len(comments)
         print(f"Scraped {len(comments)} comments")
 

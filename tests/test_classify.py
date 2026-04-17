@@ -34,19 +34,49 @@ def test_classify_by_keywords_mistake():
 
 def test_classify_by_keywords_no_match():
     categories = load_categories("config/categories.json")
-    result = classify_by_keywords("Nice video", categories)
+    result = classify_by_keywords("ok", categories)
     assert result is None
 
 
-def test_classify_comment_uses_keyword():
-    categories = load_categories("config/categories.json")
-    category, method = classify_comment("What is this?", categories)
+def test_classify_comment_question():
+    category, method = classify_comment("What is this tool about?")
     assert category == "question"
-    assert method == "keyword"
 
 
-def test_classify_comment_falls_to_other():
-    categories = load_categories("config/categories.json")
-    category, method = classify_comment("Nice video", categories)
+def test_classify_comment_spam():
+    category, method = classify_comment("Check out my channel subscribe to my page")
+    assert category == "spam"
+
+
+def test_classify_comment_testimonial():
+    category, method = classify_comment("Love this video, great content!")
+    assert category == "testimonial"
+
+
+def test_classify_comment_complaint():
+    category, method = classify_comment("This is such a waste of time")
+    assert category == "complaint"
+
+
+def test_classify_comment_idea():
+    category, method = classify_comment("You should make a video about SEO tools")
+    assert category == "idea"
+
+
+def test_classify_comment_mistake():
+    category, method = classify_comment("Actually it's not what you said, you made a mistake there")
+    assert category == "mistake"
+
+
+def test_classify_comment_short_other():
+    category, method = classify_comment("ok")
     assert category == "other"
-    assert method == "unclassified"
+
+
+def test_classify_comment_good_point_long():
+    category, method = classify_comment(
+        "I think the real issue here is that most people don't understand how AI tools "
+        "actually work under the hood, and they end up using them incorrectly which leads "
+        "to poor results and frustration with the technology."
+    )
+    assert category == "good_point"

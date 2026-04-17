@@ -29,12 +29,11 @@ jobs:
           APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
         run: python -c "from tools.scrape_comments import run; run()"
 
-      - name: Classify comments (keyword fallback)
+      - name: Classify comments
         run: python -c "from tools.classify_comments import run; run()"
 
       - name: Send report
         env:
-          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
           REPORT_RECIPIENTS: ${{ secrets.REPORT_RECIPIENTS }}
         run: python -c "from tools.send_report import run; run()"

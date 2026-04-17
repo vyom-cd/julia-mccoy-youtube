@@ -9,7 +9,7 @@ def get_connection(db_path=None):
     path = db_path or DB_PATH
     conn = sqlite3.connect(path)
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = MEMORY")
+    conn.execute("PRAGMA journal_mode = WAL")
     return conn
 
 
@@ -56,7 +56,6 @@ def insert_channel(conn, id, name, handle):
         "INSERT OR IGNORE INTO channels (id, name, handle) VALUES (?, ?, ?)",
         (id, name, handle),
     )
-    conn.commit()
 
 
 def insert_video(conn, id, channel_id, title, published_at, url):
@@ -64,7 +63,6 @@ def insert_video(conn, id, channel_id, title, published_at, url):
         "INSERT OR IGNORE INTO videos (id, channel_id, title, published_at, url) VALUES (?, ?, ?, ?, ?)",
         (id, channel_id, title, published_at, url),
     )
-    conn.commit()
 
 
 def insert_comment(conn, id, video_id, author, text, likes, published_at, is_reply, parent_id):
@@ -74,6 +72,10 @@ def insert_comment(conn, id, video_id, author, text, likes, published_at, is_rep
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
         (id, video_id, author, text, likes, published_at, is_reply, parent_id),
     )
+
+
+def commit(conn):
+    """Explicit commit — call after a batch of inserts."""
     conn.commit()
 
 

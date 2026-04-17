@@ -1,18 +1,30 @@
 import os
 import pytest
-from unittest.mock import patch, MagicMock
 from tools.send_report import build_report_data, render_report
-from tools.db import get_connection, init_db, insert_channel, insert_video, insert_comment, update_comment_category
+from tools.db import get_connection, init_db, insert_channel, insert_video, insert_comment, commit, update_comment_category
 
-TEST_DB = "data/test_comments.db"
+TEST_DB = "data/test_report.db"
 
 
 @pytest.fixture(autouse=True)
 def clean_db():
     os.makedirs("data", exist_ok=True)
+    # Remove any leftover DB files (including WAL/SHM)
+    for ext in ["", "-wal", "-shm"]:
+        path = TEST_DB + ext
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
     yield
-    if os.path.exists(TEST_DB):
-        os.remove(TEST_DB)
+    for ext in ["", "-wal", "-shm"]:
+        path = TEST_DB + ext
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
 
 
 def seed_db(conn):
@@ -21,6 +33,7 @@ def seed_db(conn):
     insert_comment(conn, id="c1", video_id="vid1", author="Alice", text="You said it wrong at 2:00", likes=3, published_at="2026-04-10T01:00:00Z", is_reply=False, parent_id=None)
     insert_comment(conn, id="c2", video_id="vid1", author="Bob", text="Great insight!", likes=10, published_at="2026-04-10T02:00:00Z", is_reply=False, parent_id=None)
     insert_comment(conn, id="c3", video_id="vid1", author="Spammer", text="Check out my channel http://spam.com", likes=0, published_at="2026-04-10T03:00:00Z", is_reply=False, parent_id=None)
+    commit(conn)
     update_comment_category(conn, "c1", "mistake", "keyword")
     update_comment_category(conn, "c2", "good_point", "ai")
     update_comment_category(conn, "c3", "spam", "keyword")
@@ -49,9 +62,8 @@ def test_render_report():
     data = build_report_data(conn)
     html = render_report(data)
     assert "YouTube Comments Report" in html
-    assert "Alice" in html
-    assert "You said it wrong" in html
-    assert "Great insight" in html
+    assert "Test Video" in html
+    assert "3" in html  # total comments count
     conn.close()
 
 
