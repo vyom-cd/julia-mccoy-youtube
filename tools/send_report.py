@@ -83,7 +83,7 @@ def build_report_data(conn, since_date=None):
         "videos": videos,
         "all_categories": CATEGORY_ORDER,
         "category_icons": CATEGORY_ICONS,
-        "full_report_url": "https://vyom-cd.github.io/julia-mccoy-youtube/",
+        "full_report_url": f"https://vyom-cd.github.io/julia-mccoy-youtube/report/?v={int(datetime.now(timezone.utc).timestamp())}",
     }
 
 
